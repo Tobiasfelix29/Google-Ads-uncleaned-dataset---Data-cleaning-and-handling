@@ -1,57 +1,59 @@
-Google Ads Sales Data Cleaning and Preprocessing
-Project Overview
+import pandas as pd
+# 1. Load Dataset
+df = pd.read_csv("GoogleAds_DataAnalytics_Sales_Uncleaned.xlsx")
 
-This project focuses on performing comprehensive data cleaning and preprocessing on an unstructured Google Ads sales dataset using Python and Pandas. The primary objective was to transform raw, inconsistent marketing campaign data into a structured, analysis-ready dataset suitable for exploratory data analysis, reporting, and business intelligence applications.
+print("Initial Shape:", df.shape)
+print("\nInitial Missing Values:\n", df.isnull().sum())
 
-Dataset Description:
-The dataset contains 2,600 records of Google Ads campaign performance, including:
+# 2. Clean Currency Columns
+df['Cost'] = (
+    df['Cost']
+    .astype(str)
+    .str.replace('$', '', regex=False)
+    .str.replace(',', '', regex=False)
+)
 
-Ad_ID
-Campaign_Name
-Clicks
-Impressions
-Cost
-Leads
-Conversions
-Conversion Rate
-Sale_Amount
-Ad_Date
-Location
-Device
-Keyword
+df['Sale_Amount'] = (
+    df['Sale_Amount']
+    .astype(str)
+    .str.replace('$', '', regex=False)
+    .str.replace(',', '', regex=False)
+)
 
-The dataset contained multiple real-world data quality issues, including missing values, inconsistent formats, mixed data types, and derived metrics stored incorrectly.
+df['Cost'] = pd.to_numeric(df['Cost'], errors='coerce')
+df['Sale_Amount'] = pd.to_numeric(df['Sale_Amount'], errors='coerce')
 
-Data Cleaning Process:
-The following preprocessing steps were performed:
+# 3. Convert Date Column
+df['Ad_Date'] = pd.to_datetime(df['Ad_Date'], errors='coerce')
 
-1. Missing Value Handling
-Identified null values using isnull() and column-wise inspection.Applied multiple imputation techniques based on business logic:
-         Forward fill and backward fill for time-based fields.
-         Median imputation for skewed numerical columns such as Cost and Impressions.
-         Zero filling for count-based fields such as Leads and Conversions.
-         Selective row removal using dropna() where appropriate.
+# 4. Standardize Text Columns
+df['Location'] = df['Location'].str.lower().str.strip()
+df['Device'] = df['Device'].str.lower().str.strip()
+df['Campaign_Name'] = df['Campaign_Name'].str.strip()
 
-2. Data Type Corrections
-Converted currency fields (Cost, Sale_Amount) from string format (e.g., "$231.88") to numeric float values.
-Standardized and converted mixed date formats in Ad_Date using pd.to_datetime().
+# 5. Handle Missing Values
+# Median imputation for numeric columns
+df['Clicks'].fillna(df['Clicks'].median(), inplace=True)
+df['Impressions'].fillna(df['Impressions'].median(), inplace=True)
+df['Cost'].fillna(df['Cost'].median(), inplace=True)
 
-3. Text Standardization
-Normalized categorical fields (Device, Location) by standardizing case and removing whitespace.
-Corrected inconsistencies in campaign naming for uniform reporting.
+# Zero fill for count-based columns
+df['Leads'].fillna(0, inplace=True)
+df['Conversions'].fillna(0, inplace=True)
+df['Sale_Amount'].fillna(0, inplace=True)
 
-4. Derived Metric Recalculation
-Recomputed Conversion Rate using: Conversion Rate = Conversions / Clicks
-Ensured all performance metrics were logically consistent and analytically accurate.
+# Forward fill for date column
+df['Ad_Date'].fillna(method='ffill', inplace=True)
 
-Outcome
-The final output is a fully cleaned, validated, and structured dataset with:
-        1.Consistent data types
-        2.No unresolved missing values
-        3.Standardized categorical variables
-        4.Accurate performance metrics
+# 6. Recalculate Conversion Rate
+df['Conversion Rate'] = df['Conversions'] / df['Clicks']
 
-This dataset is now ready for Exploratory Data Analysis (EDA)
+# 7. Final Validation
+print("\nMissing Values After Cleaning:\n", df.isnull().sum())
+print("\nFinal Shape:", df.shape)
+print("\nFinal Preview:\n", df.head())
 
-Tools used :
-Goggle collab 
+# 8. Export Cleaned Dataset
+df.to_csv("GoogleAds_DataAnalytics_Sales_Cleaned.csv", index=False)
+
+
